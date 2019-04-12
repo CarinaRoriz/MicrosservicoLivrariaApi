@@ -1,0 +1,14 @@
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
+
+namespace MicrosservicoApi.Modelos
+{
+    public class CarrinhoCompras
+    {
+        public long Id { get; set; }
+        public long IdUsuario { get; set; }
+        public List<ItemCarrinhoCompras> listaItensCarrinho { get; set; }
+    }
+}
