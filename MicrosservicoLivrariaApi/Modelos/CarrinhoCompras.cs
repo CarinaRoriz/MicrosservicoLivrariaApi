@@ -10,5 +10,7 @@ namespace MicrosservicoApi.Modelos
         public long Id { get; set; }
         public long IdUsuario { get; set; }
         public List<ItemCarrinhoCompras> listaItensCarrinho { get; set; }
+        public string LoginUsuario { get; set; }
+        public string SenhaUsuario { get; set; }
     }
 }

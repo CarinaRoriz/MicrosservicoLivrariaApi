@@ -1,9 +1,11 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using MicrosservicoApi.Modelos;
+using System.Net.Http;
+using Newtonsoft.Json;
+using System.Net.Http.Headers;
 
 namespace MicrosservicoApi.Controllers
 {
@@ -63,32 +65,79 @@ namespace MicrosservicoApi.Controllers
         [HttpPost]
         public async Task<ActionResult<List<Pedido>>> CadastrarPedido(CarrinhoCompras carrinho)
         {
-            Pedido novoPedido = new Pedido() { Id = ((listaPedidos.Count() == 0) ? 1 : (listaPedidos.Max(l => l.Id) + 1)), IdUsuario = carrinho.IdUsuario, listaItensPedido = new List<ItemPedido>(), ValorTotal = (carrinho.listaItensCarrinho == null || carrinho.listaItensCarrinho.Count() == 0) ? 0 : carrinho.listaItensCarrinho.Sum(c => c.Valor * c.Quantidade) };
+            HttpClient client = new HttpClient();
+            bool autenticado = false;
 
-            if (carrinho.listaItensCarrinho != null && carrinho.listaItensCarrinho.Count() > 0)
+            string json = JsonConvert.SerializeObject(new Usuario { Login = carrinho.LoginUsuario, Senha = carrinho.SenhaUsuario }, Formatting.Indented);
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(json);
+
+            var byteContent = new ByteArrayContent(buffer);
+
+            byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+            var httpResult = await client.PostAsync("https://localhost:5002/v1/usuarios", byteContent).ConfigureAwait(false);
+
+            //se retornar com sucesso busca os dados
+            if (httpResult.IsSuccessStatusCode)
+                autenticado = httpResult.Content.ReadAsAsync<bool>().Result;
+
+            if (autenticado)
             {
-                foreach (ItemCarrinhoCompras item in carrinho.listaItensCarrinho)
-                {
-                    ItemPedido itemPedido = new ItemPedido() { Id = ((listaItensPedido.Count() == 0) ? 1 : (listaItensPedido.Max(l => l.Id) + 1)), IdLivro = item.IdLivro, Quantidade = item.Quantidade, Valor = item.Valor, IdPedido = novoPedido.Id };
-                    novoPedido.listaItensPedido.Add(itemPedido);
-                }
-            }
-            listaPedidos.Add(novoPedido);
+                Pedido novoPedido = new Pedido() { Id = ((listaPedidos.Count() == 0) ? 1 : (listaPedidos.Max(l => l.Id) + 1)), IdUsuario = carrinho.IdUsuario, listaItensPedido = new List<ItemPedido>(), ValorTotal = (carrinho.listaItensCarrinho == null || carrinho.listaItensCarrinho.Count() == 0) ? 0 : carrinho.listaItensCarrinho.Sum(c => c.Valor * c.Quantidade) };
 
-            return listaPedidos;
+                if (carrinho.listaItensCarrinho != null && carrinho.listaItensCarrinho.Count() > 0)
+                {
+                    foreach (ItemCarrinhoCompras item in carrinho.listaItensCarrinho)
+                    {
+                        ItemPedido itemPedido = new ItemPedido() { Id = ((listaItensPedido.Count() == 0) ? 1 : (listaItensPedido.Max(l => l.Id) + 1)), IdLivro = item.IdLivro, Quantidade = item.Quantidade, Valor = item.Valor, IdPedido = novoPedido.Id };
+                        novoPedido.listaItensPedido.Add(itemPedido);
+                    }
+                }
+                listaPedidos.Add(novoPedido);
+
+                return listaPedidos;
+            }
+            else
+            {
+                return Unauthorized();
+            }
         }
 
         [HttpPost("{id}/itens")]
         public async Task<ActionResult<List<ItemPedido>>> AdicionarItensPedido(long id, ItemPedido itemPedido)
         {
-            ItemPedido novoItemPedido = new ItemPedido() { Id = ((listaItensPedido.Count() == 0) ? 1 : (listaItensPedido.Max(l => l.Id) + 1)), IdLivro = itemPedido.IdLivro, Quantidade = itemPedido.Quantidade, Valor = itemPedido.Valor, IdPedido = id };
-            listaItensPedido.Add(novoItemPedido);
+            HttpClient client = new HttpClient();
+            bool autenticado = false;
 
-            Pedido pedido = listaPedidos.Where(p => p.Id == id).FirstOrDefault();
-            pedido.ValorTotal = pedido.ValorTotal + (novoItemPedido.Quantidade * novoItemPedido.Valor);
+            string json = JsonConvert.SerializeObject(new Usuario { Login = itemPedido.LoginUsuario, Senha = itemPedido.SenhaUsuario }, Formatting.Indented);
 
+            var buffer = System.Text.Encoding.UTF8.GetBytes(json);
 
-            return listaItensPedido.Where(c => c.IdPedido == id).ToList();
+            var byteContent = new ByteArrayContent(buffer);
+
+            byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+            var httpResult = await client.PostAsync("https://localhost:5002/v1/usuarios", byteContent).ConfigureAwait(false);
+
+            //se retornar com sucesso busca os dados
+            if (httpResult.IsSuccessStatusCode)
+                autenticado = httpResult.Content.ReadAsAsync<bool>().Result;
+
+            if (autenticado)
+            {
+                ItemPedido novoItemPedido = new ItemPedido() { Id = ((listaItensPedido.Count() == 0) ? 1 : (listaItensPedido.Max(l => l.Id) + 1)), IdLivro = itemPedido.IdLivro, Quantidade = itemPedido.Quantidade, Valor = itemPedido.Valor, IdPedido = id };
+                listaItensPedido.Add(novoItemPedido);
+
+                Pedido pedido = listaPedidos.Where(p => p.Id == id).FirstOrDefault();
+                pedido.ValorTotal = pedido.ValorTotal + (novoItemPedido.Quantidade * novoItemPedido.Valor);
+
+                return listaItensPedido.Where(c => c.IdPedido == id).ToList();
+            }
+            else
+            {
+                return Unauthorized();
+            }
         }
 
     }

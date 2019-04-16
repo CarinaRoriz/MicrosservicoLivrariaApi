@@ -12,5 +12,7 @@ namespace MicrosservicoApi.Modelos
         public long IdLivro { get; set; }
         public decimal Quantidade { get; set; }
         public decimal Valor { get; set; }
+        public string LoginUsuario { get; set; }
+        public string SenhaUsuario { get; set; }
     }
 }
