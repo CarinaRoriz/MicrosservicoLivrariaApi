@@ -227,7 +227,7 @@ namespace MicrosservicoLivrariaApi.Controllers
 
                     byteContentLog.Headers.ContentType = new MediaTypeHeaderValue("application/json");
 
-                    var httpResultLog = await client.PostAsync("https://localhost:5004/v1/auditoria", byteContentLog).ConfigureAwait(false);
+                    var httpResultLog = await client.PostAsync("https://localhost:5004/v1/auditorias", byteContentLog).ConfigureAwait(false);
 
                     long idLog = 0;
 
