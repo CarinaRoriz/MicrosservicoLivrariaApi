@@ -5,13 +5,12 @@ using System.Threading.Tasks;
 
 namespace MicrosservicoLivrariaApi.Modelos
 {
-    public class ItemPedido
+    public class Pagamento
     {
-        public long Id { get; set; }
+        public long IdPagamento { get; set; }
         public long IdPedido { get; set; }
-        public long IdLivro { get; set; }
-        public decimal Quantidade { get; set; }
-        public decimal Valor { get; set; }
+        public decimal ValorPago { get; set; }
+        public DateTime DataPagamento { get; set; }
         public string LoginUsuario { get; set; }
         public string SenhaUsuario { get; set; }
     }

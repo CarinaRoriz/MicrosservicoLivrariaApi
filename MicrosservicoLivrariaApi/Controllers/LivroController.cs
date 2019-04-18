@@ -3,9 +3,9 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MicrosservicoApi.Modelos;
+using MicrosservicoLivrariaApi.Modelos;
 
-namespace MicrosservicoApi.Controllers
+namespace MicrosservicoLivrariaApi.Controllers
 {
     [Route("v1/livros")]
     [ApiController]

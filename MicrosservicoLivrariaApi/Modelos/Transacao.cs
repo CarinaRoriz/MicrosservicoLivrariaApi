@@ -5,11 +5,11 @@ using System.Threading.Tasks;
 
 namespace MicrosservicoLivrariaApi.Modelos
 {
-    public class Pedido
+    public class Transacao
     {
         public long Id { get; set; }
-        public long IdUsuario { get; set; }
-        public decimal? ValorTotal { get; set; }
-        public List<ItemPedido> listaItensPedido { get; set; }
+        public long IdPagamento { get; set; }
+        public DateTime Data { get; set; }
+        public int IdSituacao { get; set; }
     }
 }

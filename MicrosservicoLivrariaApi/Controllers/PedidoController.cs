@@ -2,12 +2,12 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MicrosservicoApi.Modelos;
+using MicrosservicoLivrariaApi.Modelos;
 using System.Net.Http;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 
-namespace MicrosservicoApi.Controllers
+namespace MicrosservicoLivrariaApi.Controllers
 {
     [Route("v1/pedidos")]
     [ApiController]
@@ -15,6 +15,8 @@ namespace MicrosservicoApi.Controllers
     {
         List<Pedido> listaPedidos;
         List<ItemPedido> listaItensPedido;
+        List<Pagamento> listaPagamento;
+
 
         public PedidoController()
         {
@@ -27,6 +29,10 @@ namespace MicrosservicoApi.Controllers
             listaPedidos = new List<Pedido>() {
                 new Pedido { Id = 1, IdUsuario = 1, ValorTotal = 30, listaItensPedido = listaItensPedido },
                 new Pedido { Id = 2, IdUsuario = 2 , ValorTotal = 0 }
+            };
+
+            listaPagamento = new List<Pagamento>() {
+                new Pagamento { IdPagamento = 1, IdPedido = 1, ValorPago = 20, DataPagamento = new System.DateTime(2019, 04, 17) }
             };
         }
 
@@ -59,7 +65,17 @@ namespace MicrosservicoApi.Controllers
                 return NotFound();
             }
 
-            return itens;
+            List<ItemPedido> lista = (from p in itens
+                                      select new ItemPedido
+                                      {
+                                          Id = p.Id,
+                                          IdPedido = p.IdPedido,
+                                          IdLivro = p.IdLivro,
+                                          Quantidade = p.Quantidade,
+                                          Valor = p.Valor
+                                      }).ToList();
+
+            return lista;
         }
 
         [HttpPost]
@@ -131,8 +147,105 @@ namespace MicrosservicoApi.Controllers
 
                 Pedido pedido = listaPedidos.Where(p => p.Id == id).FirstOrDefault();
                 pedido.ValorTotal = pedido.ValorTotal + (novoItemPedido.Quantidade * novoItemPedido.Valor);
+                
+                List<ItemPedido> lista = (from p in listaItensPedido.Where(c => c.IdPedido == id)
+                                         select new ItemPedido
+                                         {
+                                             Id = p.Id,
+                                             IdPedido = p.IdPedido,
+                                             IdLivro = p.IdLivro,
+                                             Quantidade = p.Quantidade,
+                                             Valor = p.Valor
+                                         }).ToList();
 
-                return listaItensPedido.Where(c => c.IdPedido == id).ToList();
+                return lista;
+
+            }
+            else
+            {
+                return Unauthorized();
+            }
+        }
+
+        [HttpPost("pagamentos")]
+        public async Task<ActionResult<List<Pagamento>>> RealizarPagamento(Pagamento pagamento)
+        {
+            HttpClient client = new HttpClient();
+            bool autenticado = false;
+
+            string json = JsonConvert.SerializeObject(new Usuario { Login = pagamento.LoginUsuario, Senha = pagamento.SenhaUsuario }, Formatting.Indented);
+
+            var buffer = System.Text.Encoding.UTF8.GetBytes(json);
+
+            var byteContent = new ByteArrayContent(buffer);
+
+            byteContent.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+            var httpResult = await client.PostAsync("https://localhost:5002/v1/usuarios", byteContent).ConfigureAwait(false);
+
+            //se retornar com sucesso busca os dados
+            if (httpResult.IsSuccessStatusCode)
+                autenticado = httpResult.Content.ReadAsAsync<bool>().Result;
+
+            if (autenticado)
+            {
+                Pagamento novoPagamento = new Pagamento() { IdPagamento = ((listaPagamento.Count() == 0) ? 1 : (listaPagamento.Max(l => l.IdPagamento) + 1)), IdPedido = pagamento.IdPedido, ValorPago = pagamento.ValorPago, DataPagamento = pagamento.DataPagamento, LoginUsuario = pagamento.LoginUsuario, SenhaUsuario = pagamento.SenhaUsuario };
+                listaPagamento.Add(novoPagamento);
+
+                List<Pagamento> lista = (from p in listaPagamento
+                                         select new Pagamento
+                                         {
+                                             IdPagamento = p.IdPagamento,
+                                             IdPedido = p.IdPedido,
+                                             DataPagamento = p.DataPagamento,
+                                             ValorPago = p.ValorPago
+                                         }).ToList();
+
+                string jsonTransacao = JsonConvert.SerializeObject(new Transacao { IdPagamento = novoPagamento.IdPagamento, Data = pagamento.DataPagamento }, Formatting.Indented);
+
+                var bufferTransacao = System.Text.Encoding.UTF8.GetBytes(jsonTransacao);
+
+                var byteContentTransacao = new ByteArrayContent(bufferTransacao);
+
+                byteContentTransacao.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                var httpResultTransacao = await client.PostAsync("https://localhost:5003/v1/transacoes", byteContentTransacao).ConfigureAwait(false);
+
+                long idTransacao = 0;
+
+                //se retornar com sucesso busca os dados
+                if (httpResultTransacao.IsSuccessStatusCode)
+                    idTransacao = httpResultTransacao.Content.ReadAsAsync<long>().Result;
+
+                if(idTransacao != 0)
+                {
+                    string jsonLog = JsonConvert.SerializeObject(new LogAuditoria { IdTransacao = idTransacao, IdPedido = pagamento.IdPedido, LoginUsuario = pagamento.LoginUsuario, Data = pagamento.DataPagamento }, Formatting.Indented);
+
+                    var bufferLog = System.Text.Encoding.UTF8.GetBytes(jsonLog);
+
+                    var byteContentLog = new ByteArrayContent(bufferLog);
+
+                    byteContentLog.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+
+                    var httpResultLog = await client.PostAsync("https://localhost:5004/v1/auditoria", byteContentLog).ConfigureAwait(false);
+
+                    long idLog = 0;
+
+                    //se retornar com sucesso busca os dados
+                    if (httpResultLog.IsSuccessStatusCode)
+                        idLog = httpResultLog.Content.ReadAsAsync<long>().Result;
+
+                    if (idTransacao != 0)
+                        return lista;
+                    else
+                    {
+                        return BadRequest();
+                    }
+                }
+                else
+                {
+                    return BadRequest();
+                }
             }
             else
             {

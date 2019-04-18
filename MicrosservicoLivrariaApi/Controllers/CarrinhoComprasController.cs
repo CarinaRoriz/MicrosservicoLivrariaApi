@@ -3,12 +3,12 @@ using Microsoft.EntityFrameworkCore;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using MicrosservicoApi.Modelos;
+using MicrosservicoLivrariaApi.Modelos;
 using System.Net.Http;
 using Newtonsoft.Json;
 using System.Net.Http.Headers;
 
-namespace MicrosservicoApi.Controllers
+namespace MicrosservicoLivrariaApi.Controllers
 {
     [Route("v1/carrinhos")]
     [ApiController]
@@ -47,7 +47,14 @@ namespace MicrosservicoApi.Controllers
                 return NotFound();
             }
 
-            return carrinho;
+            CarrinhoCompras item = new CarrinhoCompras
+                                    {
+                                          Id = carrinho.Id,
+                                          IdUsuario = carrinho.IdUsuario,
+                                          listaItensCarrinho = carrinho.listaItensCarrinho
+                                    };
+
+            return item;
         }
 
         [HttpGet("itens/{id}")]
@@ -60,7 +67,17 @@ namespace MicrosservicoApi.Controllers
                 return NotFound();
             }
 
-            return itens;
+            List<ItemCarrinhoCompras> lista = (from p in itens
+                                              select new ItemCarrinhoCompras
+                                              {
+                                                  Id = p.Id,
+                                                  IdCarrinhoCompras = p.IdCarrinhoCompras,
+                                                  IdLivro = p.IdLivro,
+                                                  Quantidade = p.Quantidade,
+                                                  Valor = p.Valor
+                                              }).ToList();
+
+            return lista;
         }
 
         [HttpPost]
@@ -95,7 +112,15 @@ namespace MicrosservicoApi.Controllers
 
                 listaCarrinhos.Add(novoCarrinho);
 
-                return listaCarrinhos;
+                List<CarrinhoCompras> lista = (from p in listaCarrinhos
+                                                   select new CarrinhoCompras
+                                                   {
+                                                       Id = p.Id,
+                                                       IdUsuario = p.IdUsuario,
+                                                       listaItensCarrinho = p.listaItensCarrinho
+                                                   }).ToList();
+
+                return lista;
             }
             else
             {
@@ -127,8 +152,18 @@ namespace MicrosservicoApi.Controllers
             {
                 ItemCarrinhoCompras novoItemCarrinho = new ItemCarrinhoCompras() { Id = ((listaItensCarrinhos.Count() == 0) ? 1 : (listaItensCarrinhos.Max(l => l.Id) + 1)), IdLivro = itemCarrinhoCompras.IdLivro, Quantidade = itemCarrinhoCompras.Quantidade, Valor = itemCarrinhoCompras.Valor, IdCarrinhoCompras = id };
                 listaItensCarrinhos.Add(novoItemCarrinho);
+                
+                List<ItemCarrinhoCompras> lista = (from p in listaItensCarrinhos.Where(c => c.IdCarrinhoCompras == id).ToList()
+                                                   select new ItemCarrinhoCompras
+                                                   {
+                                                       Id = p.Id,
+                                                       IdCarrinhoCompras = p.IdCarrinhoCompras,
+                                                       IdLivro = p.IdLivro,
+                                                       Quantidade = p.Quantidade,
+                                                       Valor = p.Valor
+                                                   }).ToList();
 
-                return listaItensCarrinhos.Where(c => c.IdCarrinhoCompras == id).ToList();
+                return lista;
             }
             else
             {

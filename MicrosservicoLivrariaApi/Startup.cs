@@ -14,7 +14,7 @@ using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Swashbuckle.AspNetCore.Swagger;
 
-namespace MicrosservicoMicrosservicoApi
+namespace MicrosservicoMicrosservicoLivrariaApi
 {
     public class Startup
     {
